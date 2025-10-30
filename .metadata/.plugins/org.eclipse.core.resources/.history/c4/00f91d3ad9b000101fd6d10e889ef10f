@@ -1,0 +1,27 @@
+package com.ecommerce.app.controller;
+import com.ecommerce.app.dto.*;
+import com.ecommerce.app.service.ProductService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+import lombok.var;
+
+@RestController
+@RequestMapping("/api/admin/products")
+@PreAuthorize("hasRole('ADMIN')")
+public class ProductAdminController {
+    private final ProductService productService;
+    public ProductAdminController(ProductService productService){this.productService=productService;}
+
+    @PostMapping public ResponseEntity<?> create(@RequestBody ProductRequest request){
+        var saved = productService.createProduct(request);
+        return ResponseEntity.ok(saved.getId());
+    }
+    @PutMapping("/{id}") public ResponseEntity<?> update(@PathVariable Long id,@RequestBody ProductUpdateRequest request){
+        var updated = productService.updateProduct(id, request);
+        return ResponseEntity.ok(updated.getId());
+    }
+    @DeleteMapping("/{id}") public ResponseEntity<?> delete(@PathVariable Long id){
+        productService.deleteProduct(id); return ResponseEntity.noContent().build();
+    }
+}

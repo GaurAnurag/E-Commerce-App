@@ -1,0 +1,61 @@
+package com.ecommerce.app.controller;
+
+import com.ecommerce.app.model.User;
+import com.ecommerce.app.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+import java.security.Principal;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/user")
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('USER')")
+public class UserController {
+
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    // GET /api/user/me
+    @GetMapping("/me")
+    public Map<String, Object> me(Principal principal) {
+        User user = userRepository.findByEmail(principal.getName()).orElseThrow();
+        return Map.of(
+                "id", user.getId(),
+                "name", user.getName(),
+                "email", user.getEmail()
+        );
+    }
+
+    // PUT /api/user/update  (name + email only)
+    @PutMapping("/update")
+    public Map<String, Object> updateProfile(@RequestBody Map<String, String> req, Principal principal) {
+        User user = userRepository.findByEmail(principal.getName()).orElseThrow();
+
+        if (req.get("name") != null) user.setName(req.get("name"));
+        if (req.get("email") != null) user.setEmail(req.get("email"));
+
+        userRepository.save(user);
+        return Map.of("message", "Profile updated successfully");
+    }
+
+    // PUT /api/user/change-password
+    @PutMapping("/change-password")
+    public Map<String, Object> changePassword(@RequestBody Map<String, String> req, Principal principal) {
+        User user = userRepository.findByEmail(principal.getName()).orElseThrow();
+
+        String oldPassword = req.get("oldPassword");
+        String newPassword = req.get("newPassword");
+
+        if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
+            return Map.of("message", "Old password is incorrect");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        return Map.of("message", "Password changed successfully");
+    }
+}

@@ -1,0 +1,45 @@
+package com.ecommerce.app.controller;
+
+import com.ecommerce.app.dto.SignupRequest;
+import com.ecommerce.app.model.User;
+import com.ecommerce.app.security.JwtTokenProvider;
+import com.ecommerce.app.service.UserService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/user")
+public class UserController {
+
+	private final UserService userService;
+	private final JwtTokenProvider jwtTokenProvider;
+
+	public UserController(UserService userService, JwtTokenProvider jwtTokenProvider) {
+		this.userService = userService;
+		this.jwtTokenProvider = jwtTokenProvider;
+	}
+
+	@PostMapping("/signup")
+	public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
+		// Register the user
+		User user = userService.registerNormalUser(
+				request.getUsername().trim(),
+				request.getEmail().trim().toLowerCase(),
+				request.getPassword().trim()
+		);
+
+		// Generate JWT token immediately
+		String token = jwtTokenProvider.generateToken(user.getEmail(), null);
+
+		// Return user info + token
+		return ResponseEntity.status(201).body(Map.of(
+				"message", "User registered successfully",
+				"token", token,
+				"username", user.getUsername(),
+				"email", user.getEmail(),
+				"roles", user.getRoles().stream().map(r -> r.getName()).collect(Collectors.toList())
+		));
+	}
+}

@@ -1,0 +1,17 @@
+spring.application.name=backend
+server.port=8080
+spring.datasource.url=jdbc:mysql://localhost:3306/e_shop?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=UTC
+
+spring.datasource.username=root
+spring.datasource.password=Mysql
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+app.jwt.secret=9fA72kSl03!xY892lMvPqT45w@7Xe#bC19GpZrQ8dL91sK4fH2Yt6Ue8jP0mQ7NS
+app.jwt.expiration-ms=3600000
+
+file.upload-dir=uploads
+
+app.cors.allowed-origins=http://localhost:5173,http://localhost:5174
+

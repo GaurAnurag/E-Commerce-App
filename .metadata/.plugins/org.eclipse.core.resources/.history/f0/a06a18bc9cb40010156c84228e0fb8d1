@@ -1,0 +1,45 @@
+package com.ecommerce.app.controller;
+
+import com.ecommerce.app.dto.LoginRequest;
+import com.ecommerce.app.dto.LoginResponse;
+import com.ecommerce.app.model.User;
+import com.ecommerce.app.repository.UserRepository;
+import com.ecommerce.app.security.JwtTokenProvider;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.web.bind.annotation.*;
+import lombok.var;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+	private final AuthenticationManager authManager;
+	private final JwtTokenProvider jwtProvider;
+	private final UserRepository userRepo;
+
+	public AuthController(AuthenticationManager authManager, JwtTokenProvider jwtProvider, UserRepository userRepo) {
+		this.authManager = authManager;
+		this.jwtProvider = jwtProvider;
+		this.userRepo = userRepo;
+	}
+
+	@PostMapping("/login")
+	public ResponseEntity<?> login(@RequestBody LoginRequest request) {
+	    try {
+	        authManager.authenticate(
+	            new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
+	        );
+
+	        User u = userRepo.findByEmail(request.getEmail()).orElseThrow();
+	        var rolesList = u.getRoles().stream().map(r -> r.getName()).toList();
+	        String token = jwtProvider.generateToken(u.getEmail(), rolesList);
+
+	        return ResponseEntity.ok(new LoginResponse(token, rolesList, "Login successful"));
+	    } catch (Exception ex) {
+	        ex.printStackTrace(); // SO WE SEE REAL REASON
+	        return ResponseEntity.status(401).body(Map.of("error", "Invalid email or password"));
+	    }
+	}
+}

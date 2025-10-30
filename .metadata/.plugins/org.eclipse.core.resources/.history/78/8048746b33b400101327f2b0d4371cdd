@@ -1,0 +1,53 @@
+package com.ecommerce.app.config;
+
+import com.ecommerce.app.model.Role;
+import com.ecommerce.app.model.User;
+import com.ecommerce.app.repository.RoleRepository;
+import com.ecommerce.app.repository.UserRepository;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Component
+public class DataInitializer implements CommandLineRunner {
+
+    private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public DataInitializer(RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.roleRepository = roleRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    public void run(String... args) {
+        // create roles with ROLE_ prefix to match Spring Security's hasRole checks
+        Role adminRole = roleRepository.findByName("ROLE_ADMIN")
+                .orElseGet(() -> roleRepository.save(new Role("ROLE_ADMIN")));
+
+        Role userRole = roleRepository.findByName("ROLE_USER")
+                .orElseGet(() -> roleRepository.save(new Role("ROLE_USER")));
+
+        // create admin user if missing
+        String adminEmail = "admin@example.com";
+        if (!userRepository.existsByEmail(adminEmail)) {
+            User admin = new User();
+            admin.setUsername("admin");
+            admin.setEmail(adminEmail);
+            admin.setPassword(passwordEncoder.encode("admin123")); // change for production
+            Set<Role> roles = new HashSet<>();
+            roles.add(adminRole);
+            admin.setRoles(roles);
+            admin.setEnabled(true);
+            userRepository.save(admin);
+            System.out.println("Admin user created: " + adminEmail + " / admin123");
+        } else {
+            System.out.println("Admin user already exists: " + adminEmail);
+        }
+    }
+}

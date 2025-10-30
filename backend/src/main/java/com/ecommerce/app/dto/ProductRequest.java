@@ -1,0 +1,32 @@
+package com.ecommerce.app.dto;
+
+import jakarta.validation.constraints.*;
+import lombok.Getter;
+import lombok.Setter;
+import java.math.BigDecimal;
+import java.util.List;
+
+@Getter
+@Setter
+public class ProductRequest {
+    @NotBlank
+    @Size(max = 255)
+    private String name;
+
+    @Size(max = 2000)
+    private String description;
+
+    @NotNull
+    @DecimalMin(value = "0.0", inclusive = false)
+    private BigDecimal price;
+
+    @NotNull
+    @Min(0)
+    private Integer quantity;
+
+    /**
+     * List of stored filenames returned by upload endpoint (not full URLs).
+     * Example: ["a1b2c3.png", "d4e5f6.jpg"]
+     */
+    private List<@NotBlank String> mediaFilenames;
+}

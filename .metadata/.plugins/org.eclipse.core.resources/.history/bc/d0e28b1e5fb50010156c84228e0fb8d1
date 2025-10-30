@@ -1,0 +1,40 @@
+package com.ecommerce.app.controller;
+
+import com.ecommerce.app.service.ProductService;
+
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/products")
+public class ProductViewController {
+	private final ProductService productService;
+
+	public ProductViewController(ProductService productService) {
+		this.productService = productService;
+	}
+
+	@GetMapping
+	public ResponseEntity<?> listProducts() {
+		return ResponseEntity.ok(productService.listAll().stream()
+				.map(p -> Map.of("id", p.getId(), "name", p.getName(), "description", p.getDescription(), "media",
+						p.getMedia().stream()
+								.map(m -> Map.of("url", "/uploads/" + m.getFilename(), "type", m.getContentType())))));
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity<?> getProduct(@PathVariable Long id) {
+		return productService.getPublic(id)
+				.map(p -> ResponseEntity.ok(Map.of("id", p.getId(),
+						"name", p.getName(), 
+						"description",p.getDescription(), 
+						"price", p.getPrice(), 
+						"quantity", p.getQuantity(),
+						"media",
+						p.getMedia().stream()
+						.map(m -> Map.of("url", "/uploads/" + m.getFilename(), "type", m.getContentType())))))
+				.orElseGet(() -> ResponseEntity.notFound().build());
+	}
+}

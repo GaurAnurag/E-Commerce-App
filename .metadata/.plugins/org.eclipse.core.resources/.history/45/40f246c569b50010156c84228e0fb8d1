@@ -1,0 +1,70 @@
+package com.ecommerce.app.controller;
+
+import com.ecommerce.app.service.ProductService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.*;
+
+@RestController
+@RequestMapping("/api/products")
+public class ProductViewController {
+
+	private final ProductService productService;
+
+	public ProductViewController(ProductService productService) {
+		this.productService = productService;
+	}
+
+	@GetMapping
+	public ResponseEntity<?> listProducts() {
+		var products = productService.listAll().stream().map(p -> {
+			List<Map<String, Object>> mediaList = new ArrayList<>();
+			if (p.getMedia() != null) {
+				for (var m : p.getMedia()) {
+					if (m != null && m.getFilename() != null) {
+						Map<String, Object> mediaMap = new HashMap<>();
+						mediaMap.put("url", "/uploads/" + m.getFilename());
+						mediaMap.put("type", m.getContentType() != null ? m.getContentType() : "unknown");
+						mediaList.add(mediaMap);
+					}
+				}
+			}
+
+			Map<String, Object> map = new HashMap<>();
+			map.put("id", p.getId());
+			map.put("name", p.getName());
+			map.put("description", p.getDescription());
+			map.put("media", mediaList);
+			return map;
+		}).toList();
+
+		return ResponseEntity.ok(products);
+	}
+
+	@GetMapping("/{id}")
+	public ResponseEntity<?> getProduct(@PathVariable Long id) {
+		return productService.getPublic(id).map(p -> {
+			List<Map<String, Object>> mediaList = new ArrayList<>();
+			if (p.getMedia() != null) {
+				for (var m : p.getMedia()) {
+					if (m != null && m.getFilename() != null) {
+						Map<String, Object> mediaMap = new HashMap<>();
+						mediaMap.put("url", "/uploads/" + m.getFilename());
+						mediaMap.put("type", m.getContentType() != null ? m.getContentType() : "unknown");
+						mediaList.add(mediaMap);
+					}
+				}
+			}
+
+			Map<String, Object> map = new HashMap<>();
+			map.put("id", p.getId());
+			map.put("name", p.getName());
+			map.put("description", p.getDescription());
+			map.put("price", p.getPrice());
+			map.put("quantity", p.getQuantity());
+			map.put("media", mediaList);
+			return ResponseEntity.ok(map);
+		}).orElseGet(() -> ResponseEntity.notFound().build());
+	}
+}

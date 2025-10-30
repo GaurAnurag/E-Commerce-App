@@ -1,0 +1,78 @@
+package com.ecommerce.app.service;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.*;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
+import java.io.*;
+import java.net.MalformedURLException;
+import java.nio.file.*;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+public class FileStorageService {
+	private final Path rootLocation;
+	private final long maxBytes;
+	private final Set<String> allowedExtensions;
+
+	public FileStorageService(@Value("${file.upload-dir}") String uploadDir,
+			@Value("${file.max-bytes:5242880}") long maxBytes,
+			@Value("${file.allowed-extensions:png,jpg,jpeg,webp,gif}") String allowedExts) {
+		this.rootLocation = Paths.get(uploadDir).toAbsolutePath().normalize();
+		this.maxBytes = maxBytes;
+		this.allowedExtensions = Arrays.stream(allowedExts.split(",")).map(String::trim).filter(s -> !s.isEmpty())
+				.map(String::toLowerCase).collect(Collectors.toSet());
+		try {
+			Files.createDirectories(rootLocation);
+		} catch (IOException e) {
+			throw new FileStorageException("Could not create upload directory", e);
+		}
+	}
+
+	public String storeFile(MultipartFile file) {
+		if (file == null || file.isEmpty()) {
+			throw new FileStorageException("File is empty");
+		}
+		if (file.getSize() > maxBytes) {
+			throw new FileStorageException("File exceeds max allowed size of " + maxBytes + " bytes");
+		}
+		String original = StringUtils.cleanPath(Objects.requireNonNull(file.getOriginalFilename()));
+		int idx = original.lastIndexOf('.');
+		String ext = (idx >= 0 ? original.substring(idx + 1) : "").toLowerCase();
+		if (ext.isBlank() || !allowedExtensions.contains(ext)) {
+			throw new FileStorageException("File type not allowed: " + ext);
+		}
+		String stored = UUID.randomUUID().toString() + "." + ext;
+		try {
+			Path target = rootLocation.resolve(stored).normalize();
+			if (!target.startsWith(rootLocation))
+				throw new FileStorageException("Invalid file path");
+			try (InputStream in = file.getInputStream()) {
+				Files.copy(in, target, StandardCopyOption.REPLACE_EXISTING);
+			}
+			return stored;
+		} catch (IOException e) {
+			throw new FileStorageException("Failed to store file", e);
+		}
+	}
+
+	public Resource loadAsResource(String filename) {
+		try {
+			Path file = rootLocation.resolve(filename).normalize();
+			if (!file.startsWith(rootLocation))
+				throw new FileNotFoundException("Invalid file path");
+			Resource resource = new UrlResource(file.toUri());
+			if (resource.exists() && resource.isReadable())
+				return resource;
+			throw new FileNotFoundException("File not found: " + filename);
+		} catch (MalformedURLException e) {
+			throw new FileNotFoundException("File not found: " + filename);
+		}
+	}
+
+	public Path getFilePath(String storedFilename) {
+		return rootLocation.resolve(storedFilename).normalize();
+	}
+}

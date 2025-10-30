@@ -1,0 +1,47 @@
+package com.ecommerce.app.config;
+
+import com.ecommerce.app.model.Role;
+import com.ecommerce.app.model.User;
+import com.ecommerce.app.repository.RoleRepository;
+import com.ecommerce.app.repository.UserRepository;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Component
+public class DataInitializer implements CommandLineRunner {
+
+    private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public DataInitializer(RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.roleRepository = roleRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    public void run(String... args) {
+        // Create roles if not exist
+        Role adminRole = roleRepository.findByName("ADMIN").orElseGet(() -> roleRepository.save(new Role("ADMIN")));
+        Role userRole = roleRepository.findByName("USER").orElseGet(() -> roleRepository.save(new Role("USER")));
+
+        // Create admin user if not exist
+        if (!userRepository.existsByEmail("admin01@gmail.com")) {
+            User admin = new User();
+            admin.setUsername("admin");
+            admin.setEmail("admin01@example.com");
+            admin.setPassword(passwordEncoder.encode("admin123")); // default password
+            Set<Role> roles = new HashSet<>();
+            roles.add(adminRole);
+            admin.setRoles(roles);
+            admin.setEnabled(true);
+            userRepository.save(admin);
+            System.out.println("Admin user created: admin@example.com / admin123");
+        }
+    }
+}

@@ -1,0 +1,25 @@
+package com.ecommerce.app.controller;
+
+import com.ecommerce.app.dto.SignupRequest;
+import com.ecommerce.app.service.UserService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/user")
+public class UserController {
+	private final UserService userService;
+
+	public UserController(UserService userService) {
+		this.userService = userService;
+	}
+
+	@PostMapping("/signup")
+	public ResponseEntity<?> signup(@RequestBody SignupRequest request) {
+		userService.registerNormalUser(request.getUsername().trim(), request.getEmail().trim().toLowerCase(),
+				request.getPassword().trim());
+		return ResponseEntity.status(201).body(Map.of("message", "User registered successfully"));
+	}
+}

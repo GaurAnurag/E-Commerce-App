@@ -1,0 +1,66 @@
+package com.ecommerce.app.config;
+
+import com.ecommerce.app.model.Role;
+import com.ecommerce.app.model.User;
+import com.ecommerce.app.repository.RoleRepository;
+import com.ecommerce.app.repository.UserRepository;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
+
+import java.util.HashSet;
+import java.util.Set;
+
+@Component
+public class DataInitializer implements CommandLineRunner {
+
+    private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public DataInitializer(RoleRepository roleRepository, UserRepository userRepository, PasswordEncoder passwordEncoder) {
+        this.roleRepository = roleRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @Override
+    public void run(String... args) {
+        initializeRole("ADMIN");
+        initializeRole("USER");
+
+        // Seed as many admins as you want here:
+        initializeAdminUser("admin", "admin@gmail.com", "admin123");
+        initializeAdminUser("superadmin", "super@gmail.com", "super123");
+    }
+
+    private void initializeRole(String roleName) {
+        roleRepository.findByName(roleName).orElseGet(() -> {
+            Role newRole = new Role(roleName);
+            System.out.println("Created role: " + roleName);
+            return roleRepository.save(newRole);
+        });
+    }
+
+    private void initializeAdminUser(String username, String email, String rawPassword) {
+        if (!userRepository.existsByEmail(email)) {
+            Role adminRole = roleRepository.findByName("ADMIN")
+                    .orElseThrow(() -> new RuntimeException("Admin role not found!"));
+
+            User adminUser = new User();
+            adminUser.setUsername(username);
+            adminUser.setEmail(email);
+            adminUser.setPassword(passwordEncoder.encode(rawPassword));
+
+            Set<Role> roles = new HashSet<>();
+            roles.add(adminRole);
+            adminUser.setRoles(roles);
+            adminUser.setEnabled(true);
+
+            userRepository.save(adminUser);
+            System.out.println("Created admin user: " + username);
+        } else {
+            System.out.println("Admin user already exists with email: " + email);
+        }
+    }
+}

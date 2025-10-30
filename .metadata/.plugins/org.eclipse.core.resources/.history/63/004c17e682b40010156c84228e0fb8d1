@@ -1,0 +1,40 @@
+package com.ecommerce.app.controller;
+
+import com.ecommerce.app.dto.*;
+import com.ecommerce.app.model.User;
+import com.ecommerce.app.security.JwtTokenProvider;
+import com.ecommerce.app.service.UserService;
+import org.springframework.http.*;
+import org.springframework.security.authentication.*;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/auth")
+public class AuthController {
+	private final AuthenticationManager authManager;
+	private final JwtTokenProvider tokenProvider;
+	private final UserService userService;
+
+	public AuthController(AuthenticationManager a, JwtTokenProvider t, UserService u) {
+		this.authManager = a;
+		this.tokenProvider = t;
+		this.userService = u;
+	}
+
+	@PostMapping("/login")
+	public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest req) {
+		Authentication auth = authManager
+				.authenticate(new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword()));
+		String roles = auth.getAuthorities().stream().map(r -> r.getAuthority()).reduce((a, b) -> a + "," + b)
+				.orElse("");
+		String token = tokenProvider.generateToken(req.getEmail(), roles);
+		return ResponseEntity.ok(new LoginResponse(token, roles, "Login ok"));
+	}
+
+	@PostMapping("/signup")
+	public ResponseEntity<UserDto> signup(@RequestBody SignupRequest req) {
+		User u = userService.registerNormalUser(req.getUsername(), req.getEmail(), req.getPassword());
+		return ResponseEntity.ok(new UserDto(u.getId(), u.getEmail(), "ROLE_USER"));
+	}
+}
